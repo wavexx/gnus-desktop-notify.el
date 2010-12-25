@@ -2,6 +2,7 @@
 ;;; gnus-notify.el: External mail notification for Gnus
 
 ;; Author: Yuri D'Elia <wavexx AT users.sf.net>
+;; Contributors: Philipp Haselwarter <philipp.haselwarter AT gmx.de>
 ;; URL: http://www.thregr.org/~wavexx/hacks/gnus-notify.el
 
 ;; This file is free software; you can redistribute it and/or modify
@@ -110,7 +111,10 @@ the libnotify's 'notify-send' program."
   (interactive)
   (let ( (updated-groups '()) )
     (dolist (g gnus-newsrc-alist)
-      (let ( (read (cdar (gnus-info-read g))) )
+      (let ( (read (or
+                    (and (listp (car (gnus-info-read g)))
+                         (cdar (gnus-info-read g)))
+                    (cdr (gnus-info-read g)))) )
 	(when read
 	  (let* ( (name (gnus-info-group g))
 		  (unread (gnus-group-unread (car g)))
