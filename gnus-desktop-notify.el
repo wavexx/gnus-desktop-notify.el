@@ -145,7 +145,7 @@ c' in the group buffer."
    :type bool
    :parameter-type '(const :tag "Include/exclude this group from
 the notification of new messages (depending on the value of
-'gnus-desktop-notify-groups')." t))
+`gnus-desktop-notify-groups')." t))
 
 ;; Functions
 (defun gnus-desktop-notify-exec (groups)
