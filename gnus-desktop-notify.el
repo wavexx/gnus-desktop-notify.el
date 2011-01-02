@@ -193,14 +193,14 @@ with the behavior defined by `gnus-desktop-notify-send-mode'."
   (interactive)
   (let ( (updated-groups '()) )
     (dolist (g gnus-newsrc-alist)
-      (let ( (read (or
-		     (and (listp (car (gnus-info-read g)))
-		       (cdar (gnus-info-read g)))
-		     (cdr (gnus-info-read g)))) )
-	(when read
-	  (let* ( (name (gnus-info-group g))
-		  (unread (gnus-group-unread (car g)))
-		  (count (+ read unread))
+      (let* ( (name (gnus-info-group g))
+              (read (or
+                     (and (listp (car (gnus-info-read g)))
+                          (cdar (gnus-info-read g)))
+                     (cdr (gnus-info-read g))))
+              (unread (gnus-group-unread name)) )
+	(when (and (numberp read) (numberp unread))
+	  (let* ( (count (+ read unread))
 		  (old-count (cdr (assoc name gnus-desktop-notify-counts)))
 		  (notify (gnus-group-find-parameter name 'group-notify)) )
 	    (when (or
