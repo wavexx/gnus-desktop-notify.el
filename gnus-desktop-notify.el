@@ -208,12 +208,16 @@ with the behavior defined by `gnus-desktop-notify-send-mode'."
 ;; Internals
 (setq gnus-desktop-notify-counts '())
 
+(defun gnus-desktop-notify-read-count (group)
+  (let ( (count (gnus-last-element (gnus-range-normalize (gnus-info-read group)))) )
+    (if (listp count) (cdr count) count)))
+
 (defun gnus-desktop-notify-check (&rest ignored)
   (interactive)
   (let ( (updated-groups '()) )
     (dolist (g gnus-newsrc-alist)
       (let* ( (name (gnus-info-group g))
-              (read (cdar (gnus-range-normalize (gnus-info-read g))))
+              (read (gnus-desktop-notify-read-count g))
               (unread (gnus-group-unread name)) )
 	(when (and (numberp read) (numberp unread))
 	  (let ( (count (+ read unread))
