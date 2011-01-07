@@ -54,14 +54,6 @@
 ;;
 ;; See the `gnus-desktop-notify' customization group for more details.
 ;;
-;; If you have KDE, or use Awesome (WM), you can use the following
-;; configuration to improve the appearance of the notification (the icon path
-;; is a standard Gnome stock icon):
-;;
-;;  (setq
-;;    gnus-desktop-notify-send-program "notify-send -i /usr/share/icons/gnome/32x32/actions/mail_new.png"
-;;    gnus-desktop-notify-send-mode 'gnus-desktop-notify-multi)
-;;
 ;; Feel free to send suggestions and patches to wavexx AT users.sf.net
 
 ;;; Code:
@@ -119,24 +111,18 @@ function. Each argument will be of the form:
   :type 'file)
 
 (defcustom gnus-desktop-notify-send-program
-  "notify-send -i /usr/share/icons/gnome/16x16/actions/mail_new.png"
+  "notify-send -i /usr/share/icons/gnome/32x32/actions/mail_new.png"
   "Path and default arguments to the 'notify-send' program (part
 of libnotify's utilities)."
   :type 'file)
 
-(defcustom gnus-desktop-notify-send-mode 'gnus-desktop-notify-safe
+(defcustom gnus-desktop-notify-send-mode 'gnus-desktop-notify-multi
   "`gnus-desktop-notify-send' behavior. Can be either:
 
-'gnus-desktop-notify-safe: display a single notification for
-                           each group, without using markup.
 'gnus-desktop-notify-single: display a single notification for
-                             each group, using markup.
+                             each group.
 'gnus-desktop-notify-multi: display a multi-line notification for
-                            all groups at once, using markup.
-
-  Markup is supported only on certain window managers/desktops,
-such as KDE and Awesome. You can use '-single' or '-multi' on
-those window managers."
+                            all groups at once."
   :type 'symbol)
 
 (defcustom gnus-desktop-notify-groups 'gnus-desktop-notify-all-except
@@ -183,25 +169,21 @@ each argument being of the form 'number of new messages:mailbox name'."
   "Call 'notify-send' (as defined by `gnus-desktop-notify-send-program'),
 with the behavior defined by `gnus-desktop-notify-send-mode'."
   (case gnus-desktop-notify-send-mode
-    ('gnus-desktop-notify-safe
-      (dolist (g groups)
-	(call-process-shell-command gnus-desktop-notify-send-program nil 0 nil "--"
-	  (shell-quote-argument
-	    (format "New mail: %d:%s" (cdr g) (car g))))))
     ('gnus-desktop-notify-single
       (dolist (g groups)
 	(call-process-shell-command gnus-desktop-notify-send-program nil 0 nil "--"
+	  (shell-quote-argument "New mail")
 	  (shell-quote-argument
-	    (format "New mail: <tt><b>%d</b>:<b>%s</b></tt>"
+	    (format "<tt>%3d:%s</tt>"
 	      (cdr g) (gnus-desktop-notify-escape-html-entities (car g)))))))
     ('gnus-desktop-notify-multi
-      (let ( (text "New mail:") )
-	(dolist (g groups)
-	  (setq text
-	    (concat text
-	      (format "<br/><tt>  <b>%d</b>:<b>%s</b></tt>"
-		(cdr g) (gnus-desktop-notify-escape-html-entities (car g))))))
+      (let ( (text (mapconcat
+		     (lambda (g)
+			 (format "<tt>%3d:%s</tt>"
+			   (cdr g) (gnus-desktop-notify-escape-html-entities (car g))))
+		     groups "\C-m")) )
 	(call-process-shell-command gnus-desktop-notify-send-program nil 0 nil "--"
+	  (shell-quote-argument "New mail")
 	  (shell-quote-argument text))))))
 
 
