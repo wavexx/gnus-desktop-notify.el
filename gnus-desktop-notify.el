@@ -3,7 +3,7 @@
 
 ;; Author: Yuri D'Elia <wavexx AT users.sf.net>
 ;; Contributors: Philipp Haselwarter <philipp.haselwarter AT gmx.de>
-;; Version: 1.0 (2010/12/26)
+;; Version: 1.1 (2011/01/08)
 ;; URL: http://www.thregr.org/~wavexx/hacks/gnus-desktop-notify/
 ;; GIT: git://src.thregr.org/gnus-desktop-notify/
 
@@ -22,6 +22,15 @@
 ;; the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;; Boston, MA 02111-1307, USA.
 
+;;; Changes:
+
+;; 1.1:
+;;
+;; * Make desktop notifications work correctly on agents that don't
+;;   support HTML markup (notably: almost all except awesome and KDE).
+;; * Fix some lisp errors that occured when reading the group read count.
+;; * Split subject/body in the notification and allow them to be customized.
+
 ;;; Commentary:
 
 ;; Desktop notification integration in Gnus!? Ohh goody!
@@ -35,9 +44,9 @@
 ;; (gnus-demon-add-scanmail)
 ;;
 ;; into your .gnus file. You'll need the 'notify-send' program, which (in
-;; Debian) is available in the 'libnotify-bin' package. Each time a group
-;; receives new mail, the 'notify-send' program is called, creating a small
-;; popup message containing the name of the group and the number of new
+;; Debian or Ubuntu) is available in the 'libnotify-bin' package. Each time a
+;; group receives new mail, the 'notify-send' program is called, creating a
+;; small popup message containing the name of the group and the number of new
 ;; messages.
 ;;
 ;; By default, all groups are notified when new messages are received. You can
