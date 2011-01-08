@@ -59,6 +59,7 @@
 ;;; Code:
 (require 'assoc)
 (require 'gnus-group)
+(require 'format-spec)
 
 (defgroup gnus-desktop-notify nil
   "Gnus external notification framework"
@@ -105,9 +106,8 @@ documentation for each function):
 
 (defcustom gnus-desktop-notify-exec-program "xmessage"
   "Executable called by the `gnus-desktop-notify-exec'
-function. Each argument will be of the form:
-
-  'number of new messages:mailbox name'"
+function. Each argument will be formatted according to
+`gnus-desktop-notify-format'"
   :type 'file)
 
 (defcustom gnus-desktop-notify-send-program
@@ -120,16 +120,32 @@ of libnotify's utilities)."
   "`gnus-desktop-notify-send' behavior. Can be either:
 
 'gnus-desktop-notify-single: display a single notification for
-                             each group.
+			     each group.
 'gnus-desktop-notify-multi: display a multi-line notification for
-                            all groups at once."
+			    all groups at once."
   :type 'symbol)
+
+(defcustom gnus-desktop-notify-send-subject "New mail"
+  "Text used in the notification subject when new messages are received.
+Depending on your notification agent, some HTML formatting may be
+supported (awesome and KDE are known to work)."
+  :type 'string)
+
+(defcustom gnus-desktop-notify-format "%n:%G"
+  "Format used to generate either arguments to the executable
+called by `gnus-desktop-notify-exec', or lines in the
+notification message. When using notifications, some agents may
+support HTML formatting (awesome and KDE are known to work).
+
+%n    Number of new messages in the group
+%G    Group name"
+  :type 'string)
 
 (defcustom gnus-desktop-notify-groups 'gnus-desktop-notify-all-except
   "Gnus group notification mode. Can be either:
 
 'gnus-desktop-notify-all-except: monitor all groups by
-                                 default except excluded ones,
+				 default except excluded ones,
 'gnus-desktop-notify-explicit: monitor only requested groups.
 
   Groups can be included or excluded by setting the
@@ -149,21 +165,30 @@ the notification of new messages (depending on the value of
 
 ;; Functions
 (defun gnus-desktop-notify-exec (groups)
-  "Call a program defined by `gnus-desktop-notify-exec-program' with
-each argument being of the form 'number of new messages:mailbox name'."
-  (let ( (args "") )
-    (dolist (g groups)
-      (setq args
-	(concat args " "
-	  (shell-quote-argument (format "%d:%s" (cdr g) (car g))))))
-    (call-process-shell-command
-      gnus-desktop-notify-exec-program nil 0 nil args)))
+  "Call a program defined by `gnus-desktop-notify-exec-program'
+with each argument being formatted according to
+`gnus-desktop-notify-format'"
+  (call-process-shell-command gnus-desktop-notify-exec-program nil 0 nil
+    (mapconcat
+      (lambda (g)
+	(shell-quote-argument
+	  (format-spec gnus-desktop-notify-format
+	    (format-spec-make
+	      ?n (cdr g)
+	      ?G (car g)))))
+      groups " ")))
 
 (defun gnus-desktop-notify-escape-html-entities (str)
   (setq str (replace-regexp-in-string "&" "&amp;" str))
   (setq str (replace-regexp-in-string "<" "&lt;" str))
   (setq str (replace-regexp-in-string ">" "&gt;" str))
   str)
+
+(defun gnus-desktop-notify-arg (group)
+  (format-spec gnus-desktop-notify-format
+    (format-spec-make
+      ?n (cdr group)
+      ?G (gnus-desktop-notify-escape-html-entities (car group)))))
 
 (defun gnus-desktop-notify-send (groups)
   "Call 'notify-send' (as defined by `gnus-desktop-notify-send-program'),
@@ -172,19 +197,12 @@ with the behavior defined by `gnus-desktop-notify-send-mode'."
     ('gnus-desktop-notify-single
       (dolist (g groups)
 	(call-process-shell-command gnus-desktop-notify-send-program nil 0 nil "--"
-	  (shell-quote-argument "New mail")
-	  (shell-quote-argument
-	    (format "<tt>%3d:%s</tt>"
-	      (cdr g) (gnus-desktop-notify-escape-html-entities (car g)))))))
+	  (shell-quote-argument gnus-desktop-notify-send-subject)
+	  (shell-quote-argument (gnus-desktop-notify-arg g)))))
     ('gnus-desktop-notify-multi
-      (let ( (text (mapconcat
-		     (lambda (g)
-			 (format "<tt>%3d:%s</tt>"
-			   (cdr g) (gnus-desktop-notify-escape-html-entities (car g))))
-		     groups "\C-m")) )
-	(call-process-shell-command gnus-desktop-notify-send-program nil 0 nil "--"
-	  (shell-quote-argument "New mail")
-	  (shell-quote-argument text))))))
+      (call-process-shell-command gnus-desktop-notify-send-program nil 0 nil "--"
+	(shell-quote-argument gnus-desktop-notify-send-subject)
+	(shell-quote-argument (mapconcat 'gnus-desktop-notify-arg groups "\C-m"))))))
 
 
 ;; Internals
@@ -199,8 +217,8 @@ with the behavior defined by `gnus-desktop-notify-send-mode'."
   (let ( (updated-groups '()) )
     (dolist (g gnus-newsrc-alist)
       (let* ( (name (gnus-info-group g))
-              (read (gnus-desktop-notify-read-count g))
-              (unread (gnus-group-unread name)) )
+	      (read (gnus-desktop-notify-read-count g))
+	      (unread (gnus-group-unread name)) )
 	(when (and (numberp read) (numberp unread))
 	  (let ( (count (+ read unread))
 		 (old-count (cdr (assoc name gnus-desktop-notify-counts)))
