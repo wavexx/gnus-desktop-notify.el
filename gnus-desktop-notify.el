@@ -150,6 +150,16 @@ support HTML formatting (awesome and KDE are known to work).
 %G    Group name"
   :type 'string)
 
+(defcustom gnus-desktop-notify-uncollapsed-levels gnus-group-uncollapsed-levels
+  "Number of group name elements to leave alone when making a shortened name
+for display from a group name.
+Value can be `gnus-group-uncollapsed-levels', an integer or nil to
+deactivate shortening completely."
+  :type '(choice (const :tag "Standard `gnus-group-uncollapsed-levels'"
+                        gnus-group-uncollapsed-levels)
+                 (integer)
+                 (const :tag "nil (deactivate feature)" nil)))
+
 (defcustom gnus-desktop-notify-groups 'gnus-desktop-notify-all-except
   "Gnus group notification mode. Can be either:
 
@@ -240,7 +250,10 @@ with the behavior defined by `gnus-desktop-notify-send-mode'."
 		      unread (> unread 0)
 		      old-count (> count old-count))
 		(setq updated-groups
-		  (cons (cons name (- count old-count))
+		  (cons (cons (if gnus-desktop-notify-uncollapsed-levels
+                          (gnus-short-group-name name gnus-desktop-notify-uncollapsed-levels)
+                        name)
+                      (- count old-count))
 		    updated-groups))))))))
     (when (and updated-groups (not (called-interactively-p 'any)))
       (funcall gnus-desktop-notify-function updated-groups))))
