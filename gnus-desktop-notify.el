@@ -3,7 +3,7 @@
 
 ;; Author: Yuri D'Elia <wavexx AT users.sf.net>
 ;; Contributors: Philipp Haselwarter <philipp.haselwarter AT gmx.de>
-;; Version: 1.1 (2011/01/08)
+;; Version: 1.2 (15/01/2011)
 ;; URL: http://www.thregr.org/~wavexx/hacks/gnus-desktop-notify/
 ;; GIT: git://src.thregr.org/gnus-desktop-notify/
 
@@ -24,8 +24,11 @@
 
 ;;; Changes:
 
-;; 1.1:
+;; 1.2:
+;; * Collapse group names by default (see
+;;   `gnus-desktop-notify-uncollapsed-levels').
 ;;
+;; 1.1:
 ;; * Make desktop notifications work correctly on agents that don't
 ;;   support HTML markup (notably: almost all except awesome and KDE).
 ;; * Fix some lisp errors that occured when reading the group read count.
