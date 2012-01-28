@@ -1,5 +1,4 @@
-;;; -*- emacs-lisp -*-
-;;; gnus-desktop-notify.el: Gnus Desktop Notification global minor mode
+;;; gnus-desktop-notify.el --- Gnus Desktop Notification global minor mode
 
 ;; Author: Yuri D'Elia <wavexx AT users.sf.net>
 ;; Contributors: Philipp Haselwarter <philipp.haselwarter AT gmx.de>
