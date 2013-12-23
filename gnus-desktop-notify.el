@@ -65,7 +65,7 @@
 ;;
 ;; See the `gnus-desktop-notify' customization group for more details.
 ;;
-;; Feel free to send suggestions and patches to wavexx AT users.sf.net
+;; Feel free to send suggestions and patches to wavexx AT thregr.org
 
 ;;; Code:
 (require 'assoc)
