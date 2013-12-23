@@ -1,6 +1,6 @@
 ;;; gnus-desktop-notify.el --- Gnus Desktop Notification global minor mode
 
-;; Author: Yuri D'Elia <wavexx AT users.sf.net>
+;; Author: Yuri D'Elia <wavexx AT thregr.org>
 ;; Contributors: Philipp Haselwarter <philipp.haselwarter AT gmx.de>
 ;; Version: 1.2 (15/01/2011)
 ;; URL: http://www.thregr.org/~wavexx/hacks/gnus-desktop-notify/
