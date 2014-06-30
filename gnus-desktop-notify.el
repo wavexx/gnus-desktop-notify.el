@@ -52,11 +52,10 @@
 ;; (gnus-desktop-notify-mode)
 ;; (gnus-demon-add-scanmail)
 ;;
-;; into your .gnus file. You'll need the 'notify-send' program, which (in
-;; Debian or Ubuntu) is available in the 'libnotify-bin' package. Each time a
-;; group receives new mail, the 'notify-send' program is called, creating a
-;; small popup message containing the name of the group and the number of new
-;; messages.
+;; into your ``.gnus`` file. With emacs >= 24 the ``notifications`` library is
+;; used, so no external dependencies are required. With emacs <= 23 instead the
+;; generic ``notify-send`` program is used, which (in Debian or Ubuntu) is
+;; available in the ``libnotify-bin`` package.
 ;;
 ;; By default, all groups are notified when new messages are received. You can
 ;; exclude a single group by setting the `group-notify' group parameter to
