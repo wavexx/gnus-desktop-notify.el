@@ -2,9 +2,10 @@
 
 ;; Author: Yuri D'Elia <wavexx AT thregr.org>
 ;; Contributors: Philipp Haselwarter <philipp.haselwarter AT gmx.de>
-;; Version: 1.2 (15/01/2011)
+;; Version: 1.3
 ;; URL: http://www.thregr.org/~wavexx/hacks/gnus-desktop-notify/
 ;; GIT: git://src.thregr.org/gnus-desktop-notify/
+;; Package-Requires: ((gnus "1.0"))
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -21,7 +22,7 @@
 ;; the Free Software Foundation, Inc., 59 Temple Place - Suite 330,
 ;; Boston, MA 02111-1307, USA.
 
-;;; Changes:
+;;; Change Log:
 
 ;; 1.3:
 ;; * Use `notifications' in emacs 24 (if available) by default (new function
@@ -44,9 +45,9 @@
 
 ;; Desktop notification integration in Gnus!? Ohh goody!
 ;;
-;; gnus-desktop-notify.el provides a simple mechanism to notify external
-;; programs when new messages are received. For basic usage, to be used in
-;; conjunction with gnus-daemon, put the following:
+;; ``gnus-desktop-notify.el`` provides a simple mechanism to notify the user
+;; when new messages are received. For basic usage, to be used in conjunction
+;; with ``gnus-daemon``, put the following:
 ;;
 ;; (require 'gnus-desktop-notify)
 ;; (gnus-desktop-notify-mode)
@@ -290,3 +291,4 @@ the behavior defined by `gnus-desktop-notify-behavior'."
 
 
 (provide 'gnus-desktop-notify)
+;;; gnus-desktop-notify.el ends here
