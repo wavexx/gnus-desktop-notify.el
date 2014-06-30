@@ -86,6 +86,7 @@
   "Gnus external notification framework"
   :group 'gnus)
 
+;;;###autoload
 (define-minor-mode gnus-desktop-notify-mode
   "Gnus Desktop Notification mode uses libnotify's 'notify-send'
 program to generate popup messages or call external executables
