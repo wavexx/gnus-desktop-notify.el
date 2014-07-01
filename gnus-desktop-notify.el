@@ -2,10 +2,11 @@
 
 ;; Author: Yuri D'Elia <wavexx AT thregr.org>
 ;; Contributors: Philipp Haselwarter <philipp.haselwarter AT gmx.de>
-;; Version: 1.3
+;; Version: 1.4
 ;; URL: http://www.thregr.org/~wavexx/hacks/gnus-desktop-notify/
 ;; GIT: git://src.thregr.org/gnus-desktop-notify/
 ;; Package-Requires: ((gnus "1.0"))
+;; Package-Suggests: ((alert "1.0"))
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -24,6 +25,9 @@
 
 ;;; Change Log:
 
+;; 1.4:
+;; * Use `alert' package by default if available (`gnus-desktop-notify-alert').
+;;
 ;; 1.3:
 ;; * Use `notifications' in emacs 24 (if available) by default (new function
 ;;   `gnus-desktop-notify-dbus').
@@ -34,12 +38,6 @@
 ;; 1.2:
 ;; * Collapse group names by default (see
 ;;   `gnus-desktop-notify-uncollapsed-levels').
-;;
-;; 1.1:
-;; * Make desktop notifications work correctly on agents that don't
-;;   support HTML markup (notably: almost all except awesome and KDE).
-;; * Fix some lisp errors that occured when reading the group read count.
-;; * Split subject/body in the notification and allow them to be customized.
 
 ;;; Commentary:
 
@@ -47,16 +45,23 @@
 ;;
 ;; ``gnus-desktop-notify.el`` provides a simple mechanism to notify the user
 ;; when new messages are received. For basic usage, to be used in conjunction
-;; with ``gnus-daemon``, put the following:
+;; with `gnus-daemon', put the following:
 ;;
 ;; (require 'gnus-desktop-notify)
 ;; (gnus-desktop-notify-mode)
 ;; (gnus-demon-add-scanmail)
 ;;
-;; into your ``.gnus`` file. With emacs >= 24 the ``notifications`` library is
-;; used, so no external dependencies are required. With emacs <= 23 instead the
-;; generic ``notify-send`` program is used, which (in Debian or Ubuntu) is
-;; available in the ``libnotify-bin`` package.
+;; into your ``.gnus`` file. The default is to use `alert' if available, which
+;; works on every operating system and allows the user to customize the
+;; notification through emacs. See https://github.com/jwiegley/alert#for-users
+;; for further info. If not available, the `notifications' library (part of
+;; emacs >= 24) is used, so no external dependencies are required. With emacs
+;; <= 23 instead the generic ``notify-send`` program is used, which (in Debian
+;; or Ubuntu) is available in the ``libnotify-bin`` package.
+;;
+;; You can also call any program directly by changing the
+;; `gnus-desktop-notify-exec-program' variable, or change the behavior entirely
+;; by setting a different `gnus-desktop-notify-function' function.
 ;;
 ;; By default, all groups are notified when new messages are received. You can
 ;; exclude a single group by setting the `group-notify' group parameter to
@@ -64,10 +69,6 @@
 ;; `gnus-desktop-notify-groups' variable to `gnus-desktop-notify-explicit' and
 ;; then manually selecting which groups to include. Press 'G c' in the group
 ;; buffer to customize group parameters interactively.
-;;
-;; You can call any program by changing the `gnus-desktop-notify-exec-program'
-;; variable, or change the behavior entirely by setting a different
-;; `gnus-desktop-notify-function' function.
 ;;
 ;; The behavior of the notification can be tuned by changing the
 ;; `gnus-desktop-notify-behavior' variable.
@@ -80,7 +81,8 @@
 (require 'assoc)
 (require 'gnus-group)
 (require 'format-spec)
-(require 'notifications nil t)
+(unless (require 'alert nil t)
+  (require 'notifications nil t))
 
 (defgroup gnus-desktop-notify nil
   "Gnus external notification framework"
@@ -115,18 +117,20 @@ details."
 
 ;; Custom variables
 (defcustom gnus-desktop-notify-function
-  (if (featurep 'notifications)
-    'gnus-desktop-notify-dbus
-    'gnus-desktop-notify-send)
-  "Function called when a group has new messages. The first
+  (cond ((featurep 'alert) 'gnus-desktop-notify-alert)
+	((featurep 'notifications) 'gnus-desktop-notify-dbus)
+	(t 'gnus-desktop-notify-send))
+  "Function called when a group receives new messages. The first
 argument will be an alist containing the groups and the number of
-new messages. The default is to use `gnus-desktop-notify-dbus' if
-the `notifications' package is available, otherwise use the
-generic `gnus-desktop-notify-send'.
+new messages. The default is to use `gnus-desktop-notify-alert'
+if the `alert' package is available, `gnus-desktop-notify-dbus'
+on emacs >= 24, or fallback to the generic
+`gnus-desktop-notify-send' otherwise.
 
   The following functions available (see the documentation for
 each function):
 
+`gnus-desktop-notify-alert': use the `alert' library.
 `gnus-desktop-notify-dbus': use the `notifications' library.
 `gnus-desktop-notify-send': call the 'notify-send' program.
 `gnus-desktop-notify-exec': call a customizable program."
@@ -253,6 +257,18 @@ the behavior defined by `gnus-desktop-notify-behavior'."
       ('gnus-desktop-notify-multi
        (notifications-notify :title gnus-desktop-notify-send-subject
 			     :body (mapconcat 'identity groups "\C-m"))))))
+
+(defun gnus-desktop-notify-alert (groups)
+  "Generate a notification directly using `alert' with
+the behavior defined by `gnus-desktop-notify-behavior'."
+  (let ((groups (mapcar 'gnus-desktop-notify-arg groups)))
+    (case gnus-desktop-notify-behavior
+      ('gnus-desktop-notify-single
+       (dolist (g groups)
+	 (alert g :title gnus-desktop-notify-send-subject)))
+      ('gnus-desktop-notify-multi
+       (alert (mapconcat 'identity groups "\n")
+	      :title gnus-desktop-notify-send-subject)))))
 
 
 ;; Internals
