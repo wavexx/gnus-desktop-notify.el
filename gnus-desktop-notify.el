@@ -249,7 +249,6 @@ the behavior defined by `gnus-desktop-notify-behavior'."
     (case gnus-desktop-notify-behavior
       ('gnus-desktop-notify-single
        (dolist (g groups)
-	 (message g)
 	 (notifications-notify :title gnus-desktop-notify-send-subject :body g)))
       ('gnus-desktop-notify-multi
        (notifications-notify :title gnus-desktop-notify-send-subject
