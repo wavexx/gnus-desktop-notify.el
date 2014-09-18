@@ -3,7 +3,7 @@
 ;; Author: Yuri D'Elia <wavexx AT thregr.org>
 ;; Contributors: Philipp Haselwarter <philipp.haselwarter AT gmx.de>
 ;; Version: 1.4
-;; URL: http://www.thregr.org/~wavexx/hacks/gnus-desktop-notify/
+;; URL: http://www.thregr.org/~wavexx/software/gnus-desktop-notify/
 ;; GIT: git://src.thregr.org/gnus-desktop-notify/
 ;; Package-Requires: ((gnus "1.0"))
 ;; Package-Suggests: ((alert "1.0"))
