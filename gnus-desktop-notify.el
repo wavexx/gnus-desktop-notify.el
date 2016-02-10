@@ -83,6 +83,8 @@
 (require 'format-spec)
 (unless (require 'alert nil t)
   (require 'notifications nil t))
+(eval-when-compile
+  (require 'cl))
 
 (defgroup gnus-desktop-notify nil
   "Gnus external notification framework"
