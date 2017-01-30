@@ -78,7 +78,6 @@
 ;; Feel free to send suggestions and patches to wavexx AT thregr.org
 
 ;;; Code:
-(require 'assoc)
 
 (require 'format-spec)
 (require 'gnus-group)
@@ -242,30 +241,35 @@ the notification of new messages (depending on the value of
          (count (gnus-last-element range)))
     (or (cdr-safe count) count)))
 
-(defun gnus-desktop-notify-check (&rest ignored)
+(defun gnus-desktop-short-group-name (group)
+  "Collapse GROUP name.
+See `gnus-desktop-notify-uncollapsed-levels' for ways to control
+collapsing."
+  (if gnus-desktop-notify-uncollapsed-levels
+      (gnus-short-group-name group gnus-desktop-notify-uncollapsed-levels)
+    group))
+
+(defun gnus-desktop-notify-check (&rest _ignored)
   (interactive)
-  (let ( (updated-groups '()) )
+  (let ((updated-groups ()))
     (dolist (g gnus-newsrc-alist)
-      (let* ( (name (gnus-info-group g))
-              (read (gnus-desktop-notify-read-count g))
-              (unread (gnus-group-unread name)) )
+      (let* ((name   (gnus-info-group g))
+             (read   (gnus-desktop-notify-read-count g))
+             (unread (gnus-group-unread name)))
         (when (and (numberp read) (numberp unread))
-          (let ( (count (+ read unread))
-                 (old-count (cdr (assoc name gnus-desktop-notify-counts)))
-                 (notify (gnus-group-find-parameter name 'group-notify)) )
-            (when (or
-                   (and (eq gnus-desktop-notify-groups 'gnus-desktop-notify-all-except) (not notify))
-                   (and (eq gnus-desktop-notify-groups 'gnus-desktop-notify-explicit) notify))
-              (aput 'gnus-desktop-notify-counts name count)
-              (when (and
-                     unread (> unread 0)
-                     old-count (> count old-count))
-                (setq updated-groups
-                      (cons (cons (if gnus-desktop-notify-uncollapsed-levels
-                                      (gnus-short-group-name name gnus-desktop-notify-uncollapsed-levels)
-                                    name)
-                                  (- count old-count))
-                            updated-groups))))))))
+          (let* ((count     (+ read unread))
+                 (old-count (lax-plist-get gnus-desktop-notify-counts name))
+                 (delta     (- count (or old-count count)))
+                 (notify    (gnus-group-find-parameter name 'group-notify)))
+            (when (eq gnus-desktop-notify-groups
+                      (if notify
+                          'gnus-desktop-notify-explicit
+                        'gnus-desktop-notify-all-except))
+              (setq gnus-desktop-notify-counts
+                    (lax-plist-put gnus-desktop-notify-counts name count))
+              (when (and (> unread 0) (> delta 0))
+                (push (cons (gnus-desktop-short-group-name name) delta)
+                      updated-groups)))))))
     (when (and updated-groups (not (called-interactively-p 'any)))
       (funcall gnus-desktop-notify-function updated-groups))))
 
