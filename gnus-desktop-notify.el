@@ -86,43 +86,16 @@
 (eval-when-compile
   (require 'cl))
 
+;;; Custom variables
+
 (defgroup gnus-desktop-notify nil
   "Gnus external notification framework"
   :group 'gnus)
 
-;;;###autoload
-(define-minor-mode gnus-desktop-notify-mode
-  "Gnus Desktop Notification mode uses libnotify's 'notify-send'
-program to generate popup messages or call external executables
-whenever a group receives new messages through gnus-demon (see
-`gnus-demon-add-handler').
-
-  You can actually call any program by changing the
-`gnus-desktop-notify-exec-program' variable, or change the
-behavior entirely by setting a different
-`gnus-desktop-notify-function' function.
-
-  See the `gnus-desktop-notify' customization group for more
-details."
-  :init-value nil
-  :group 'gnus-desktop-notify
-  :require 'gnus
-  :global t
-  (cond
-    (gnus-desktop-notify-mode
-      (add-hook 'gnus-after-getting-new-news-hook 'gnus-desktop-notify-check)
-      (add-hook 'gnus-started-hook 'gnus-desktop-notify-check))
-    (t
-      (remove-hook 'gnus-after-getting-new-news-hook 'gnus-desktop-notify-check)
-      (remove-hook 'gnus-started-hook 'gnus-desktop-notify-check))))
-
-
-;;; Custom variables
-
 (defcustom gnus-desktop-notify-function
-  (cond ((featurep 'alert) 'gnus-desktop-notify-alert)
-	((featurep 'notifications) 'gnus-desktop-notify-dbus)
-	(t 'gnus-desktop-notify-send))
+  (cond ((featurep 'alert)         'gnus-desktop-notify-alert)
+        ((featurep 'notifications) 'gnus-desktop-notify-dbus)
+        (t                         'gnus-desktop-notify-send))
   "Function called when a group receives new messages. The first
 argument will be an alist containing the groups and the number of
 new messages. The default is to use `gnus-desktop-notify-alert'
@@ -159,10 +132,11 @@ See `gnus-desktop-notify-send-program'."
 (defcustom gnus-desktop-notify-behavior 'gnus-desktop-notify-multi
   "Desktop notification behavior. Can be either:
 
-'gnus-desktop-notify-single: display a single notification for
-			     each group.
-'gnus-desktop-notify-multi: display a multi-line notification for
-			    all groups at once."
+`gnus-desktop-notify-single': display a single notification for
+                              each group.
+
+`gnus-desktop-notify-multi': display a multi-line notification
+                             for all groups at once."
   :type 'symbol)
 
 (defcustom gnus-desktop-notify-send-subject "New mail"
@@ -193,14 +167,15 @@ deactivate shortening completely."
 (defcustom gnus-desktop-notify-groups 'gnus-desktop-notify-all-except
   "Gnus group notification mode. Can be either:
 
-'gnus-desktop-notify-all-except: monitor all groups by
-				 default except excluded ones,
-'gnus-desktop-notify-explicit: monitor only requested groups.
+`gnus-desktop-notify-all-except': monitor all groups by default
+                                  except excluded ones,
 
-  Groups can be included or excluded by setting the
-'group-notify' group parameter to 't'.  This can be set either in
-the `gnus-parameters' variable, or interactively by pressing 'G
-c' in the group buffer."
+`gnus-desktop-notify-explicit': monitor only requested groups.
+
+Groups can be included or excluded by setting the `group-notify'
+group parameter to `t'. This can be set either in the
+`gnus-parameters' variable, or interactively by pressing `G c' in
+the group buffer."
   :type 'symbol)
 
 ;;; Group parameters
@@ -223,6 +198,7 @@ the notification of new messages (depending on the value of
     (">" . "&gt;" ))
   "Map special characters to their HTML entities.")
 
+;; FIXME: Do not reinvent the wheel if possible
 (defun gnus-desktop-notify-escape-html-entities (str)
   "Escape HTML character entity references."
   (let* ((lut   gnus-desktop-notify-html-lut)
@@ -273,7 +249,7 @@ collapsing."
     (when (and updated-groups (not (called-interactively-p 'any)))
       (funcall gnus-desktop-notify-function updated-groups))))
 
-;;; Notification functions
+;;; Notification backends
 
 (defun gnus-desktop-notify-exec (groups)
   "Call a program defined by `gnus-desktop-notify-exec-program'.
@@ -335,6 +311,34 @@ the behavior defined by `gnus-desktop-notify-behavior'."
       ('gnus-desktop-notify-multi
        (alert (mapconcat 'identity groups "\n")
 	      :title gnus-desktop-notify-send-subject)))))
+
+;;; Minor mode
+
+;;;###autoload
+(define-minor-mode gnus-desktop-notify-mode
+  "Gnus Desktop Notification mode uses libnotify's 'notify-send'
+program to generate popup messages or call external executables
+whenever a group receives new messages through gnus-demon (see
+`gnus-demon-add-handler').
+
+  You can actually call any program by changing the
+`gnus-desktop-notify-exec-program' variable, or change the
+behavior entirely by setting a different
+`gnus-desktop-notify-function' function.
+
+  See the `gnus-desktop-notify' customization group for more
+details."
+  :init-value nil
+  :group 'gnus-desktop-notify
+  :require 'gnus
+  :global t
+  (cond
+   (gnus-desktop-notify-mode
+    (add-hook 'gnus-after-getting-new-news-hook #'gnus-desktop-notify-check)
+    (add-hook 'gnus-started-hook #'gnus-desktop-notify-check))
+   (t
+    (remove-hook 'gnus-after-getting-new-news-hook #'gnus-desktop-notify-check)
+    (remove-hook 'gnus-started-hook #'gnus-desktop-notify-check))))
 
 (provide 'gnus-desktop-notify)
 ;;; gnus-desktop-notify.el ends here
