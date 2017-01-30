@@ -79,8 +79,9 @@
 
 ;;; Code:
 (require 'assoc)
-(require 'gnus-group)
+
 (require 'format-spec)
+(require 'gnus-group)
 (unless (require 'alert nil t)
   (require 'notifications nil t))
 (eval-when-compile
@@ -117,7 +118,8 @@ details."
       (remove-hook 'gnus-started-hook 'gnus-desktop-notify-check))))
 
 
-;; Custom variables
+;;; Custom variables
+
 (defcustom gnus-desktop-notify-function
   (cond ((featurep 'alert) 'gnus-desktop-notify-alert)
 	((featurep 'notifications) 'gnus-desktop-notify-dbus)
@@ -202,8 +204,8 @@ the `gnus-parameters' variable, or interactively by pressing 'G
 c' in the group buffer."
   :type 'symbol)
 
+;;; Group parameters
 
-;; Group parameters
 (gnus-define-group-parameter
   group-notify
    :type bool
@@ -211,18 +213,63 @@ c' in the group buffer."
 the notification of new messages (depending on the value of
 `gnus-desktop-notify-groups')." t))
 
-;; Functions
+;;; Internals
+
+(defvar gnus-desktop-notify-counts ()
+  "Map Gnus group names to their total number of articles.")
+
+(defvar gnus-desktop-notify-html-lut
+  '(("&" . "&amp;")
+    ("<" . "&lt;" )
+    (">" . "&gt;" ))
+  "Map special characters to their HTML entities.")
+
 (defun gnus-desktop-notify-escape-html-entities (str)
-  (setq str (replace-regexp-in-string "&" "&amp;" str))
-  (setq str (replace-regexp-in-string "<" "&lt;" str))
-  (setq str (replace-regexp-in-string ">" "&gt;" str))
-  str)
+  "Escape HTML character entity references."
+  (let* ((lut   gnus-desktop-notify-html-lut)
+         (chars (format "[%s]" (mapconcat #'car lut ""))))
+    (replace-regexp-in-string
+     chars (lambda (s) (cdr (assoc-string s lut))) str)))
 
 (defun gnus-desktop-notify-arg (group)
   (format-spec gnus-desktop-notify-format
     (format-spec-make
       ?n (cdr group)
       ?G (gnus-desktop-notify-escape-html-entities (car group)))))
+
+(defun gnus-desktop-notify-read-count (group)
+  (let* ((range (gnus-range-normalize (gnus-info-read group)))
+         (count (gnus-last-element range)))
+    (or (cdr-safe count) count)))
+
+(defun gnus-desktop-notify-check (&rest ignored)
+  (interactive)
+  (let ( (updated-groups '()) )
+    (dolist (g gnus-newsrc-alist)
+      (let* ( (name (gnus-info-group g))
+              (read (gnus-desktop-notify-read-count g))
+              (unread (gnus-group-unread name)) )
+        (when (and (numberp read) (numberp unread))
+          (let ( (count (+ read unread))
+                 (old-count (cdr (assoc name gnus-desktop-notify-counts)))
+                 (notify (gnus-group-find-parameter name 'group-notify)) )
+            (when (or
+                   (and (eq gnus-desktop-notify-groups 'gnus-desktop-notify-all-except) (not notify))
+                   (and (eq gnus-desktop-notify-groups 'gnus-desktop-notify-explicit) notify))
+              (aput 'gnus-desktop-notify-counts name count)
+              (when (and
+                     unread (> unread 0)
+                     old-count (> count old-count))
+                (setq updated-groups
+                      (cons (cons (if gnus-desktop-notify-uncollapsed-levels
+                                      (gnus-short-group-name name gnus-desktop-notify-uncollapsed-levels)
+                                    name)
+                                  (- count old-count))
+                            updated-groups))))))))
+    (when (and updated-groups (not (called-interactively-p 'any)))
+      (funcall gnus-desktop-notify-function updated-groups))))
+
+;;; Notification functions
 
 (defun gnus-desktop-notify-exec (groups)
   "Call a program defined by `gnus-desktop-notify-exec-program'.
@@ -284,42 +331,6 @@ the behavior defined by `gnus-desktop-notify-behavior'."
       ('gnus-desktop-notify-multi
        (alert (mapconcat 'identity groups "\n")
 	      :title gnus-desktop-notify-send-subject)))))
-
-
-;; Internals
-(setq gnus-desktop-notify-counts '())
-
-(defun gnus-desktop-notify-read-count (group)
-  (let ( (count (gnus-last-element (gnus-range-normalize (gnus-info-read group)))) )
-    (if (listp count) (cdr count) count)))
-
-(defun gnus-desktop-notify-check (&rest ignored)
-  (interactive)
-  (let ( (updated-groups '()) )
-    (dolist (g gnus-newsrc-alist)
-      (let* ( (name (gnus-info-group g))
-	      (read (gnus-desktop-notify-read-count g))
-	      (unread (gnus-group-unread name)) )
-	(when (and (numberp read) (numberp unread))
-	  (let ( (count (+ read unread))
-		 (old-count (cdr (assoc name gnus-desktop-notify-counts)))
-		 (notify (gnus-group-find-parameter name 'group-notify)) )
-	    (when (or
-		    (and (eq gnus-desktop-notify-groups 'gnus-desktop-notify-all-except) (not notify))
-		    (and (eq gnus-desktop-notify-groups 'gnus-desktop-notify-explicit) notify))
-	      (aput 'gnus-desktop-notify-counts name count)
-	      (when (and
-		      unread (> unread 0)
-		      old-count (> count old-count))
-		(setq updated-groups
-		  (cons (cons (if gnus-desktop-notify-uncollapsed-levels
-                          (gnus-short-group-name name gnus-desktop-notify-uncollapsed-levels)
-                        name)
-                      (- count old-count))
-		    updated-groups))))))))
-    (when (and updated-groups (not (called-interactively-p 'any)))
-      (funcall gnus-desktop-notify-function updated-groups))))
-
 
 (provide 'gnus-desktop-notify)
 ;;; gnus-desktop-notify.el ends here
