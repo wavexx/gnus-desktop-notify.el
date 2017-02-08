@@ -81,48 +81,20 @@
 
 (require 'format-spec)
 (require 'gnus-group)
+
 (unless (require 'alert nil t)
   (require 'notifications nil t))
-(eval-when-compile
-  (require 'cl))
+
+;;; Custom variables
 
 (defgroup gnus-desktop-notify nil
   "Gnus external notification framework"
   :group 'gnus)
 
-;;;###autoload
-(define-minor-mode gnus-desktop-notify-mode
-  "Gnus Desktop Notification mode uses libnotify's 'notify-send'
-program to generate popup messages or call external executables
-whenever a group receives new messages through gnus-demon (see
-`gnus-demon-add-handler').
-
-  You can actually call any program by changing the
-`gnus-desktop-notify-exec-program' variable, or change the
-behavior entirely by setting a different
-`gnus-desktop-notify-function' function.
-
-  See the `gnus-desktop-notify' customization group for more
-details."
-  :init-value nil
-  :group 'gnus-desktop-notify
-  :require 'gnus
-  :global t
-  (cond
-    (gnus-desktop-notify-mode
-      (add-hook 'gnus-after-getting-new-news-hook 'gnus-desktop-notify-check)
-      (add-hook 'gnus-started-hook 'gnus-desktop-notify-check))
-    (t
-      (remove-hook 'gnus-after-getting-new-news-hook 'gnus-desktop-notify-check)
-      (remove-hook 'gnus-started-hook 'gnus-desktop-notify-check))))
-
-
-;;; Custom variables
-
 (defcustom gnus-desktop-notify-function
-  (cond ((featurep 'alert) 'gnus-desktop-notify-alert)
-	((featurep 'notifications) 'gnus-desktop-notify-dbus)
-	(t 'gnus-desktop-notify-send))
+  (cond ((featurep 'alert)         'gnus-desktop-notify-alert)
+        ((featurep 'notifications) 'gnus-desktop-notify-dbus)
+        (t                         'gnus-desktop-notify-send))
   "Function called when a group receives new messages. The first
 argument will be an alist containing the groups and the number of
 new messages. The default is to use `gnus-desktop-notify-alert'
@@ -159,10 +131,11 @@ See `gnus-desktop-notify-send-program'."
 (defcustom gnus-desktop-notify-behavior 'gnus-desktop-notify-multi
   "Desktop notification behavior. Can be either:
 
-'gnus-desktop-notify-single: display a single notification for
-			     each group.
-'gnus-desktop-notify-multi: display a multi-line notification for
-			    all groups at once."
+`gnus-desktop-notify-single': display a single notification for
+                              each group.
+
+`gnus-desktop-notify-multi': display a multi-line notification
+                             for all groups at once."
   :type 'symbol)
 
 (defcustom gnus-desktop-notify-send-subject "New mail"
@@ -193,14 +166,15 @@ deactivate shortening completely."
 (defcustom gnus-desktop-notify-groups 'gnus-desktop-notify-all-except
   "Gnus group notification mode. Can be either:
 
-'gnus-desktop-notify-all-except: monitor all groups by
-				 default except excluded ones,
-'gnus-desktop-notify-explicit: monitor only requested groups.
+`gnus-desktop-notify-all-except': monitor all groups by default
+                                  except excluded ones,
 
-  Groups can be included or excluded by setting the
-'group-notify' group parameter to 't'.  This can be set either in
-the `gnus-parameters' variable, or interactively by pressing 'G
-c' in the group buffer."
+`gnus-desktop-notify-explicit': monitor only requested groups.
+
+Groups can be included or excluded by setting the `group-notify'
+group parameter to `t'. This can be set either in the
+`gnus-parameters' variable, or interactively by pressing `G c' in
+the group buffer."
   :type 'symbol)
 
 ;;; Group parameters
@@ -223,18 +197,13 @@ the notification of new messages (depending on the value of
     (">" . "&gt;" ))
   "Map special characters to their HTML entities.")
 
+;; FIXME: Do not reinvent the wheel if possible
 (defun gnus-desktop-notify-escape-html-entities (str)
   "Escape HTML character entity references."
   (let* ((lut   gnus-desktop-notify-html-lut)
          (chars (format "[%s]" (mapconcat #'car lut ""))))
     (replace-regexp-in-string
      chars (lambda (s) (cdr (assoc-string s lut))) str)))
-
-(defun gnus-desktop-notify-arg (group)
-  (format-spec gnus-desktop-notify-format
-    (format-spec-make
-      ?n (cdr group)
-      ?G (gnus-desktop-notify-escape-html-entities (car group)))))
 
 (defun gnus-desktop-notify-read-count (group)
   (let* ((range (gnus-range-normalize (gnus-info-read group)))
@@ -249,7 +218,36 @@ collapsing."
       (gnus-short-group-name group gnus-desktop-notify-uncollapsed-levels)
     group))
 
+(defun gnus-desktop-notify-format-1 (group)
+  "Convert GROUP to its printed representation.
+GROUP should have the form (NAME . COUNT), where NAME is the
+group name to display and COUNT is the corresponding number of
+articles."
+  (let ((name  (gnus-desktop-notify-escape-html-entities (car group)))
+        (count (cdr group)))
+    (format-spec gnus-desktop-notify-format
+                 (format-spec-make ?n count
+                                   ?G name))))
+
+(defun gnus-desktop-notify-format-n (groups)
+  "Return a list of the printed representations of GROUPS.
+
+GROUPS should be a list of cons cells accepted by
+`gnus-desktop-notify-format-1', which see.
+
+Depending on the value of `gnus-desktop-notify-behavior', the
+returned list will comprise either a single multiline string or
+multiple uniline strings."
+  (mapcar (lambda (body) (mapconcat #'identity body "\n"))
+          ;; Iterate over the groups either individually or as a whole
+          (let ((bodies (mapcar #'gnus-desktop-notify-format-1 groups)))
+            (cond ((eq gnus-desktop-notify-behavior 'gnus-desktop-notify-single)
+                   (mapcar #'list bodies))
+                  ((eq gnus-desktop-notify-behavior 'gnus-desktop-notify-multi)
+                   `(,bodies))))))
+
 (defun gnus-desktop-notify-check (&rest _ignored)
+  "Check all groups for and notify of new articles."
   (interactive)
   (let ((updated-groups ()))
     (dolist (g gnus-newsrc-alist)
@@ -271,70 +269,72 @@ collapsing."
                 (push (cons (gnus-desktop-short-group-name name) delta)
                       updated-groups)))))))
     (when (and updated-groups (not (called-interactively-p 'any)))
-      (funcall gnus-desktop-notify-function updated-groups))))
+      (mapc gnus-desktop-notify-function
+            (gnus-desktop-notify-format-n updated-groups)))))
 
-;;; Notification functions
+(defun gnus-desktop-shell-command (&rest args)
+  "Execute ARGS as a synchronous shell command without I/O."
+  (call-process-shell-command
+   (mapconcat #'shell-quote-argument args " ") nil 0 nil))
 
-(defun gnus-desktop-notify-exec (groups)
+;;; Notification backends
+
+(defun gnus-desktop-notify-exec (body)
   "Call a program defined by `gnus-desktop-notify-exec-program'.
 with each argument being a group formatted according to
 `gnus-desktop-notify-format' and calling behavior is defined by
 `gnus-desktop-notify-behavior'."
-  (let ((groups (mapcar 'gnus-desktop-notify-arg groups)))
-    (case gnus-desktop-notify-behavior
-      ('gnus-desktop-notify-single
-       (dolist (g groups)
-	 (call-process-shell-command gnus-desktop-notify-exec-program nil 0 nil
-				     (shell-quote-argument g))))
-      ('gnus-desktop-notify-multi
-       (call-process-shell-command gnus-desktop-notify-exec-program nil 0 nil
-				   (mapconcat 'shell-quote-argument groups " "))))))
+  (funcall #'gnus-desktop-shell-command gnus-desktop-notify-exec-program body))
 
-(defun gnus-desktop-notify-send (groups)
+(defun gnus-desktop-notify-send (body)
   "Invoke the configured `notify-send' program.
 See `gnus-desktop-notify-send-program',
 `gnus-desktop-notify-send-switches' and
 `gnus-desktop-notify-behavior' for configuration options."
-  (let ((args   `(,gnus-desktop-notify-send-program
-                  ,@gnus-desktop-notify-send-switches
-                  "--"
-                  ,gnus-desktop-notify-send-subject))
-        (groups (mapcar #'gnus-desktop-notify-arg groups)))
-    ;; Iterate over the groups either individually or as a whole
-    (dolist (group (case gnus-desktop-notify-behavior
-                     (gnus-desktop-notify-single groups)
-                     (gnus-desktop-notify-multi  `(,groups))))
-      ;; Join the groups when viewing as a whole
-      (let* ((lines (if (listp group) group `(,group)))
-             (body  (mapconcat #'identity lines "\n")))
-        ;; Actually perform the work
-        (call-process-shell-command
-         (mapconcat #'shell-quote-argument `(,@args ,body) " ")
-         nil 0 nil)))))
+  (apply #'gnus-desktop-shell-command
+         `(,gnus-desktop-notify-send-program
+           ,@gnus-desktop-notify-send-switches
+           "--"
+           ,gnus-desktop-notify-send-subject
+           ,body)))
 
-(defun gnus-desktop-notify-dbus (groups)
+(defun gnus-desktop-notify-dbus (body)
   "Generate a notification directly using `notifications' with
 the behavior defined by `gnus-desktop-notify-behavior'."
-  (let ((groups (mapcar 'gnus-desktop-notify-arg groups)))
-    (case gnus-desktop-notify-behavior
-      ('gnus-desktop-notify-single
-       (dolist (g groups)
-	 (notifications-notify :title gnus-desktop-notify-send-subject :body g)))
-      ('gnus-desktop-notify-multi
-       (notifications-notify :title gnus-desktop-notify-send-subject
-			     :body (mapconcat 'identity groups "\n"))))))
+  (notifications-notify :title gnus-desktop-notify-send-subject :body body))
 
-(defun gnus-desktop-notify-alert (groups)
+(defun gnus-desktop-notify-alert (body)
   "Generate a notification directly using `alert' with
 the behavior defined by `gnus-desktop-notify-behavior'."
-  (let ((groups (mapcar 'gnus-desktop-notify-arg groups)))
-    (case gnus-desktop-notify-behavior
-      ('gnus-desktop-notify-single
-       (dolist (g groups)
-	 (alert g :title gnus-desktop-notify-send-subject)))
-      ('gnus-desktop-notify-multi
-       (alert (mapconcat 'identity groups "\n")
-	      :title gnus-desktop-notify-send-subject)))))
+  (alert body :title gnus-desktop-notify-send-subject))
+
+;;; Minor mode
+
+;;;###autoload
+(define-minor-mode gnus-desktop-notify-mode
+  "Gnus Desktop Notification mode uses libnotify's 'notify-send'
+program to generate popup messages or call external executables
+whenever a group receives new messages through gnus-demon (see
+`gnus-demon-add-handler').
+
+  You can actually call any program by changing the
+`gnus-desktop-notify-exec-program' variable, or change the
+behavior entirely by setting a different
+`gnus-desktop-notify-function' function.
+
+  See the `gnus-desktop-notify' customization group for more
+details."
+  :init-value nil
+  :group 'gnus-desktop-notify
+  :require 'gnus
+  :global t
+  (cond
+   (gnus-desktop-notify-mode
+    (add-hook 'gnus-after-getting-new-news-hook #'gnus-desktop-notify-check)
+    (add-hook 'gnus-started-hook #'gnus-desktop-notify-check))
+   (t
+    (remove-hook 'gnus-after-getting-new-news-hook #'gnus-desktop-notify-check)
+    (remove-hook 'gnus-started-hook #'gnus-desktop-notify-check))))
 
 (provide 'gnus-desktop-notify)
 ;;; gnus-desktop-notify.el ends here
