@@ -194,15 +194,16 @@ the notification of new messages (depending on the value of
 
 ;;; Internals
 
-(defvar gnus-desktop-notify-counts ()
+(defvar gnus-desktop-notify--counts ()
   "Map Gnus group names to their total number of articles.")
 
-(defun gnus-desktop-notify-read-count (group)
+(defun gnus-desktop-notify--read-count (group)
+  "Return read count for gnus GROUP."
   (let* ((range (gnus-range-normalize (gnus-info-read group)))
          (count (gnus-last-element range)))
     (or (cdr-safe count) count)))
 
-(defun gnus-desktop-short-group-name (group)
+(defun gnus-desktop-notify--short-group-name (group)
   "Collapse GROUP name.
 See `gnus-desktop-notify-uncollapsed-levels' for ways to control
 collapsing."
@@ -210,7 +211,7 @@ collapsing."
       (gnus-short-group-name group gnus-desktop-notify-uncollapsed-levels)
     group))
 
-(defun gnus-desktop-notify-format-1 (group)
+(defun gnus-desktop-notify--format-1 (group)
   "Convert GROUP to its printed representation.
 GROUP should have the form (NAME . COUNT), where NAME is the
 group name to display and COUNT is the corresponding number of
@@ -221,18 +222,18 @@ articles."
                  (format-spec-make ?n count
                                    ?G name))))
 
-(defun gnus-desktop-notify-format-n (groups)
+(defun gnus-desktop-notify--format-n (groups)
   "Return a list of the printed representations of GROUPS.
 
 GROUPS should be a list of cons cells accepted by
-`gnus-desktop-notify-format-1', which see.
+`gnus-desktop-notify--format-1', which see.
 
 Depending on the value of `gnus-desktop-notify-behavior', the
 returned list will comprise either a single multiline string or
 multiple uniline strings."
   (mapcar (lambda (body) (mapconcat #'identity body "\n"))
           ;; Iterate over the groups either individually or as a whole
-          (let ((bodies (mapcar #'gnus-desktop-notify-format-1 groups)))
+          (let ((bodies (mapcar #'gnus-desktop-notify--format-1 groups)))
             (cond ((eq gnus-desktop-notify-behavior 'gnus-desktop-notify-single)
                    (mapcar #'list bodies))
                   ((eq gnus-desktop-notify-behavior 'gnus-desktop-notify-multi)
@@ -242,29 +243,29 @@ multiple uniline strings."
   "Check all groups for and notify of new articles."
   (interactive)
   (let ((updated-groups ()))
-    (dolist (g gnus-newsrc-alist)
-      (let* ((name   (gnus-info-group g))
-             (read   (gnus-desktop-notify-read-count g))
+    (dolist (group gnus-newsrc-alist)
+      (let* ((name   (gnus-info-group group))
+             (read   (gnus-desktop-notify--read-count group))
              (unread (gnus-group-unread name)))
         (when (and (numberp read) (numberp unread))
           (let* ((count     (+ read unread))
-                 (old-count (lax-plist-get gnus-desktop-notify-counts name))
+                 (old-count (lax-plist-get gnus-desktop-notify--counts name))
                  (delta     (- count (or old-count count)))
                  (notify    (gnus-group-find-parameter name 'group-notify)))
             (when (eq gnus-desktop-notify-groups
                       (if notify
                           'gnus-desktop-notify-explicit
                         'gnus-desktop-notify-all-except))
-              (setq gnus-desktop-notify-counts
-                    (lax-plist-put gnus-desktop-notify-counts name count))
+              (setq gnus-desktop-notify--counts
+                    (lax-plist-put gnus-desktop-notify--counts name count))
               (when (and (> unread 0) (> delta 0))
-                (push (cons (gnus-desktop-short-group-name name) delta)
+                (push (cons (gnus-desktop-notify--short-group-name name) delta)
                       updated-groups)))))))
     (when (and updated-groups (not (called-interactively-p 'any)))
       (mapc gnus-desktop-notify-function
-            (gnus-desktop-notify-format-n updated-groups)))))
+            (gnus-desktop-notify--format-n updated-groups)))))
 
-(defun gnus-desktop-shell-command (&rest args)
+(defun gnus-desktop-notify--shell-command (&rest args)
   "Execute ARGS as a synchronous shell command without I/O."
   (call-process-shell-command
    (mapconcat #'shell-quote-argument args " ") nil 0 nil))
@@ -276,14 +277,15 @@ multiple uniline strings."
 with each argument being a group formatted according to
 `gnus-desktop-notify-format' and calling behavior is defined by
 `gnus-desktop-notify-behavior'."
-  (funcall #'gnus-desktop-shell-command gnus-desktop-notify-exec-program body))
+  (funcall #'gnus-desktop-notify--shell-command
+           gnus-desktop-notify-exec-program body))
 
 (defun gnus-desktop-notify-send (body)
   "Invoke the configured `notify-send' program.
 See `gnus-desktop-notify-send-program',
 `gnus-desktop-notify-send-switches' and
 `gnus-desktop-notify-behavior' for configuration options."
-  (apply #'gnus-desktop-shell-command
+  (apply #'gnus-desktop-notify--shell-command
          `(,gnus-desktop-notify-send-program
            ,@gnus-desktop-notify-send-switches
            "--"
