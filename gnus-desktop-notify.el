@@ -235,7 +235,7 @@ multiple uniline strings."
                   ((eq gnus-desktop-notify-behavior 'gnus-desktop-notify-multi)
                    `(,bodies))))))
 
-(defun gnus-desktop-notify-check (&rest _ignored)
+(defun gnus-desktop-notify-check ()
   "Check all groups for and notify of new articles."
   (interactive)
   (let ((updated-groups ()))
