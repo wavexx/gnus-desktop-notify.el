@@ -1,4 +1,4 @@
-;;; gnus-desktop-notify.el --- Gnus Desktop Notification global minor mode
+;;; gnus-desktop-notify.el --- Gnus Desktop Notification global minor mode  -*- lexical-binding: t -*-
 
 ;; Author: Yuri D'Elia <wavexx AT thregr.org>
 ;; Contributors: Philipp Haselwarter <philipp.haselwarter AT gmx.de>
