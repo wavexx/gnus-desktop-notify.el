@@ -191,20 +191,6 @@ the notification of new messages (depending on the value of
 (defvar gnus-desktop-notify-counts ()
   "Map Gnus group names to their total number of articles.")
 
-(defvar gnus-desktop-notify-html-lut
-  '(("&" . "&amp;")
-    ("<" . "&lt;" )
-    (">" . "&gt;" ))
-  "Map special characters to their HTML entities.")
-
-;; FIXME: Do not reinvent the wheel if possible
-(defun gnus-desktop-notify-escape-html-entities (str)
-  "Escape HTML character entity references."
-  (let* ((lut   gnus-desktop-notify-html-lut)
-         (chars (format "[%s]" (mapconcat #'car lut ""))))
-    (replace-regexp-in-string
-     chars (lambda (s) (cdr (assoc-string s lut))) str)))
-
 (defun gnus-desktop-notify-read-count (group)
   (let* ((range (gnus-range-normalize (gnus-info-read group)))
          (count (gnus-last-element range)))
@@ -223,7 +209,7 @@ collapsing."
 GROUP should have the form (NAME . COUNT), where NAME is the
 group name to display and COUNT is the corresponding number of
 articles."
-  (let ((name  (gnus-desktop-notify-escape-html-entities (car group)))
+  (let ((name  (url-insert-entities-in-string (car group)))
         (count (cdr group)))
     (format-spec gnus-desktop-notify-format
                  (format-spec-make ?n count
