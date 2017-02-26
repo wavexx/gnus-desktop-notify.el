@@ -65,8 +65,8 @@
 ;; by setting a different `gnus-desktop-notify-function' function.
 ;;
 ;; By default, all groups are notified when new messages are received. You can
-;; exclude a single group by setting the `group-notify' group parameter to
-;; t. You can also selectively monitor groups instead by changing the
+;; exclude a single group by setting the `group-notify' group parameter to `t'.
+;; You can also selectively monitor groups instead by changing the
 ;; `gnus-desktop-notify-groups' variable to `gnus-desktop-notify-explicit' and
 ;; then manually selecting which groups to include. Press 'G c' in the group
 ;; buffer to customize group parameters interactively.
@@ -92,27 +92,27 @@
 ;;; Custom variables
 
 (defgroup gnus-desktop-notify nil
-  "Gnus external notification framework"
+  "Gnus external notification framework."
   :group 'gnus)
 
 (defcustom gnus-desktop-notify-function
   (cond ((featurep 'alert)         'gnus-desktop-notify-alert)
         ((featurep 'notifications) 'gnus-desktop-notify-dbus)
         (t                         'gnus-desktop-notify-send))
-  "Function called when a group receives new messages. The first
-argument will be an alist containing the groups and the number of
-new messages. The default is to use `gnus-desktop-notify-alert'
-if the `alert' package is available, `gnus-desktop-notify-dbus'
-on emacs >= 24, or fallback to the generic
-`gnus-desktop-notify-send' otherwise.
+  "Notification backend used when a group receives new messages.
+The backend is passed the notification content as a single,
+potentially multi-line string argument.
 
-  The following functions available (see the documentation for
-each function):
+The default is to use `gnus-desktop-notify-alert' if the `alert'
+package is available, `gnus-desktop-notify-dbus' on emacs >= 24,
+or fallback to the generic `gnus-desktop-notify-send' otherwise.
 
-`gnus-desktop-notify-alert': use the `alert' library.
-`gnus-desktop-notify-dbus': use the `notifications' library.
-`gnus-desktop-notify-send': call the 'notify-send' program.
-`gnus-desktop-notify-exec': call a customizable program."
+The following functions are available (whose documentation see):
+
+`gnus-desktop-notify-alert': Use the `alert' library.
+`gnus-desktop-notify-dbus':  Use the `notifications' library.
+`gnus-desktop-notify-send':  Call the `notify-send' program.
+`gnus-desktop-notify-exec':  Call a customizable program."
   :type 'function)
 
 (defcustom gnus-desktop-notify-exec-program "xmessage"
@@ -135,12 +135,12 @@ See `gnus-desktop-notify-send-program'."
 (defcustom gnus-desktop-notify-behavior 'gnus-desktop-notify-multi
   "Desktop notification behavior. Can be either:
 
-`gnus-desktop-notify-single': display a single notification for
-                              each group.
-
-`gnus-desktop-notify-multi': display a multi-line notification
-                             for all groups at once."
-  :type 'symbol)
+`gnus-desktop-notify-single': Display a separate notification per
+                              gnus group.
+`gnus-desktop-notify-multi':  Display a multi-line notification
+                              for all groups at once."
+  :type '(choice (const :tag "One per group" gnus-desktop-notify-single)
+                 (const :tag "All-in-one"    gnus-desktop-notify-multi)))
 
 (defcustom gnus-desktop-notify-send-subject "New mail"
   "Text used in the notification subject when new messages are received.
@@ -160,26 +160,28 @@ and KDE are known to work).
 (defcustom gnus-desktop-notify-uncollapsed-levels gnus-group-uncollapsed-levels
   "Number of group name elements to leave alone when making a shortened name
 for display from a group name.
-Value can be `gnus-group-uncollapsed-levels', an integer or nil to
-deactivate shortening completely."
-  :type '(choice (const :tag "Standard `gnus-group-uncollapsed-levels'"
-                        gnus-group-uncollapsed-levels)
-                 (integer)
-                 (const :tag "nil (deactivate feature)" nil)))
+Value can be `gnus-group-uncollapsed-levels', an integer or `nil'
+to deactivate shortening completely."
+  :type `(choice (const :tag "Standard `gnus-group-uncollapsed-levels'"
+                        ,gnus-group-uncollapsed-levels)
+                 (const :tag "nil (deactivate feature)" nil)
+                 integer))
 
 (defcustom gnus-desktop-notify-groups 'gnus-desktop-notify-all-except
-  "Gnus group notification mode. Can be either:
+  "Determine which gnus groups to monitor. Can be either:
 
-`gnus-desktop-notify-all-except': monitor all groups by default
-                                  except excluded ones,
-
-`gnus-desktop-notify-explicit': monitor only requested groups.
+`gnus-desktop-notify-all-except': Monitor all groups by default
+                                  except excluded ones.
+`gnus-desktop-notify-explicit':   Monitor only specified groups.
 
 Groups can be included or excluded by setting the `group-notify'
-group parameter to `t'. This can be set either in the
-`gnus-parameters' variable, or interactively by pressing `G c' in
-the group buffer."
-  :type 'symbol)
+group or topic parameter to `t' or `nil', respectively. Group
+parameters can be set collectively in the `gnus-parameters'
+variable or per group in the group buffer. When point is over the
+desired group, `G c' and `G p' give interactive and programmatic
+interfaces to group parameter customization, respectively."
+  :type '(choice (const :tag "All except"     gnus-desktop-notify-all-except)
+                 (const :tag "Only specified" gnus-desktop-notify-explicit)))
 
 ;;; Group parameters
 
