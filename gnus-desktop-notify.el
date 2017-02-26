@@ -85,6 +85,9 @@
 (unless (require 'alert nil t)
   (require 'notifications nil t))
 
+(declare-function alert "alert")
+(declare-function notifications-notify "notifications")
+
 ;;; Custom variables
 
 (defgroup gnus-desktop-notify nil
