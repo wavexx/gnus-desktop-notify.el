@@ -1,7 +1,8 @@
-;;; gnus-desktop-notify.el --- Gnus Desktop Notification global minor mode
+;;; gnus-desktop-notify.el --- Gnus Desktop Notification global minor mode  -*- lexical-binding: t -*-
 
 ;; Author: Yuri D'Elia <wavexx AT thregr.org>
 ;; Contributors: Philipp Haselwarter <philipp.haselwarter AT gmx.de>
+;;               Basil L. Contovounesios <contovob AT tcd.ie>
 ;; Version: 1.4
 ;; URL: http://www.thregr.org/~wavexx/software/gnus-desktop-notify.el/
 ;; GIT: git://src.thregr.org/gnus-desktop-notify.el/
@@ -84,6 +85,9 @@
 
 (unless (require 'alert nil t)
   (require 'notifications nil t))
+
+(declare-function alert "alert")
+(declare-function notifications-notify "notifications")
 
 ;;; Custom variables
 
@@ -191,20 +195,6 @@ the notification of new messages (depending on the value of
 (defvar gnus-desktop-notify-counts ()
   "Map Gnus group names to their total number of articles.")
 
-(defvar gnus-desktop-notify-html-lut
-  '(("&" . "&amp;")
-    ("<" . "&lt;" )
-    (">" . "&gt;" ))
-  "Map special characters to their HTML entities.")
-
-;; FIXME: Do not reinvent the wheel if possible
-(defun gnus-desktop-notify-escape-html-entities (str)
-  "Escape HTML character entity references."
-  (let* ((lut   gnus-desktop-notify-html-lut)
-         (chars (format "[%s]" (mapconcat #'car lut ""))))
-    (replace-regexp-in-string
-     chars (lambda (s) (cdr (assoc-string s lut))) str)))
-
 (defun gnus-desktop-notify-read-count (group)
   (let* ((range (gnus-range-normalize (gnus-info-read group)))
          (count (gnus-last-element range)))
@@ -223,7 +213,7 @@ collapsing."
 GROUP should have the form (NAME . COUNT), where NAME is the
 group name to display and COUNT is the corresponding number of
 articles."
-  (let ((name  (gnus-desktop-notify-escape-html-entities (car group)))
+  (let ((name  (url-insert-entities-in-string (car group)))
         (count (cdr group)))
     (format-spec gnus-desktop-notify-format
                  (format-spec-make ?n count
@@ -246,7 +236,7 @@ multiple uniline strings."
                   ((eq gnus-desktop-notify-behavior 'gnus-desktop-notify-multi)
                    `(,bodies))))))
 
-(defun gnus-desktop-notify-check (&rest _ignored)
+(defun gnus-desktop-notify-check ()
   "Check all groups for and notify of new articles."
   (interactive)
   (let ((updated-groups ()))
