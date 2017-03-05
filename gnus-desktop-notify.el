@@ -2,6 +2,7 @@
 
 ;; Author: Yuri D'Elia <wavexx AT thregr.org>
 ;; Contributors: Philipp Haselwarter <philipp.haselwarter AT gmx.de>
+;;               Basil L. Contovounesios <contovob AT tcd.ie>
 ;; Version: 1.4
 ;; URL: http://www.thregr.org/~wavexx/software/gnus-desktop-notify.el/
 ;; GIT: git://src.thregr.org/gnus-desktop-notify.el/
