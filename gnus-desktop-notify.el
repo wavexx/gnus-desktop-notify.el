@@ -205,7 +205,7 @@ the notification of new messages (depending on the value of
 (defun gnus-desktop-notify--read-count (group)
   "Return read count for gnus GROUP."
   (let* ((range (gnus-range-normalize (gnus-info-read group)))
-         (count (gnus-last-element range)))
+         (count (car (last range))))
     (or (cdr-safe count) count)))
 
 (defun gnus-desktop-notify--short-group-name (group)
